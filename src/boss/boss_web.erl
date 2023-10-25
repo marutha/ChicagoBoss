@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright
+%%     This file is part of ChicagoBoss project.
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc
+%%-------------------------------------------------------------------
+
 -module(boss_web).
 
 -export([reload_routes/0,
@@ -9,6 +21,7 @@
         get_all_applications/0,
         base_url/1,
         domains/1,
+        static_prefix/1,
         translator_pid/1,
         router_pid/1,
         application_info/1]).
@@ -39,6 +52,9 @@ base_url(App) ->
 
 domains(App) ->
     gen_server:call(boss_web, {domains, App}).
+
+static_prefix(App) ->
+    gen_server:call(boss_web, {static_prefix, App}).
 
 translator_pid(AppName) ->
     gen_server:call(boss_web, {translator_pid, AppName}).

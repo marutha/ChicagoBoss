@@ -1,5 +1,17 @@
+%%-------------------------------------------------------------------
+%% @author
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright
+%%     This file is part of ChicagoBoss project.
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc
+%%-------------------------------------------------------------------
+
 -module(boss_mail_driver_mock).
--export([start/0, stop/1, deliver/4, read/2, push/0, pop/0]).
+-export([start/0, stop/1, deliver/5, read/2, push/0, pop/0]).
 
 start() ->
     register(boss_mock_inbox, spawn(fun() -> loop([]) end)),
@@ -43,7 +55,8 @@ loop([InboxDict|OldState] = State) ->
             loop(OldState)
     end.
 
-deliver(_, FromAddress, ToAddress, BodyFun) ->
+deliver(_, FromAddress, ToAddress, BodyFun, _ResultFun) ->
+    % TODO use ResultFun
     boss_mock_inbox ! {self(), {deliver, FromAddress, ToAddress, BodyFun()}},
     receive
         {boss_mock_inbox, ok} ->

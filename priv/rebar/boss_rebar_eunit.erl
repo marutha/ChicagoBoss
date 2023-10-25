@@ -76,8 +76,8 @@
 %% Public API
 %% ===================================================================
 eunit(RebarConf, BossConf, AppFile) ->
-	%% boss_change
-	Config = RebarConf,
+    %% boss_change
+    Config = RebarConf,
     %% Make sure ?EUNIT_DIR/ and ebin/ directory exists (tack on dummy module)
     ok = filelib:ensure_dir(eunit_dir() ++ "/foo"),
     ok = filelib:ensure_dir(ebin_dir() ++ "/foo"),
@@ -91,52 +91,20 @@ eunit(RebarConf, BossConf, AppFile) ->
     true = code:add_patha(eunit_dir()),
     true = code:add_pathz(ebin_dir()),
 
-    %% Obtain all the test modules for inclusion in the compile stage.
-	%% boss_change: compile only src/test/eunit tests
-    TestErls = rebar_utils:find_files(filename:join(["src", "test", "eunit"]), ".*\\.erl\$"),
-
-    %% Copy source files to eunit dir for cover in case they are not directly
-    %% in src but in a subdirectory of src. Cover only looks in cwd and ../src
-    %% for source files.
-    SrcErls = rebar_utils:find_files("src", ".*\\.erl\$"),
-
-    %% If it is not the first time rebar eunit is executed, there will be source
-    %% files already present in ?EUNIT_DIR. Since some SCMs (like Perforce) set
-    %% the source files as being read only (unless they are checked out), we
-    %% need to be sure that the files already present in ?EUNIT_DIR are writable
-    %% before doing the copy. This is done here by removing any file that was
-    %% already present before calling rebar_file_utils:cp_r.
-
-    %% Get the full path to a file that was previously copied in ?EUNIT_DIR
-    ToCleanUp = fun(F, Acc) ->
-                        F2 = filename:basename(F),
-                        F3 = filename:join([?EUNIT_DIR, F2]),
-                        case filelib:is_regular(F3) of
-                            true -> [F3|Acc];
-                            false -> Acc
-                        end
-                end,
-
-    ok = rebar_file_utils:delete_each(lists:foldl(ToCleanUp, [], TestErls)),
-    ok = rebar_file_utils:delete_each(lists:foldl(ToCleanUp, [], SrcErls)),
-	
-    %% boss_change
-    %ok = rebar_file_utils:cp_r(SrcErls ++ TestErls, ?EUNIT_DIR),
-
     %% boss_change
     %% Compilation (boss-way)
-    boss_rebar:compile(RebarConf, BossConf, AppFile, ?EUNIT_DIR),    
+    boss_rebar:compile(RebarConf, BossConf, AppFile, ?EUNIT_DIR),
 
     %% Compile erlang code to ?EUNIT_DIR, using a tweaked config
     %% with appropriate defines for eunit, and include all the test modules
     %% as well.
 
-	rebar_erlc_compiler:doterl_compile(eunit_config(Config),
-                                       ?EUNIT_DIR, TestErls),
-	%% boss_change
-	%% Load all boss ebin dir and start boss
-	boss_rebar:boss_load(BossConf, AppFile),
-	boss_rebar:boss_start(BossConf),
+    {ok, SrcErls} = rebar_erlc_compiler:test_compile(Config, "eunit", ?EUNIT_DIR),
+
+    %% boss_change
+    %% Load all boss ebin dir and start boss
+    boss_rebar:boss_load(BossConf, AppFile),
+    boss_rebar:boss_start(BossConf),
 
     %% Build a list of all the .beams in ?EUNIT_DIR -- use this for
     %% cover and eunit testing. Normally you can just tell cover
@@ -200,7 +168,7 @@ ebin_dir() ->
 perform_eunit(Config, Modules) ->
     %% suite defined, so only specify the module that relates to the
     %% suite (if any). Suite can be a comma seperated list of modules to run.
-    Suite = rebar_config:get_global(suite, undefined),
+    Suite = rebar_config:get_global(Config, suite, undefined),
     EunitOpts = get_eunit_opts(Config),
 
     %% Move down into ?EUNIT_DIR while we run tests so any generated files
@@ -223,7 +191,7 @@ perform_eunit(EunitOpts, _Modules, Suites) ->
 
 get_eunit_opts(Config) ->
     %% Enable verbose in eunit if so requested..
-    BaseOpts = case rebar_config:is_verbose() of
+    BaseOpts = case rebar_log:is_verbose(Config) of
                    true ->
                        [verbose];
                    false ->
@@ -231,47 +199,6 @@ get_eunit_opts(Config) ->
                end,
 
     BaseOpts ++ rebar_config:get_list(Config, eunit_opts, []).
-
-eunit_config(Config) ->
-    EqcOpts = eqc_opts(),
-    PropErOpts = proper_opts(),
-
-    ErlOpts = rebar_config:get_list(Config, erl_opts, []),
-    EunitOpts = rebar_config:get_list(Config, eunit_compile_opts, []),
-    Opts0 = [{d, 'TEST'}] ++
-        ErlOpts ++ EunitOpts ++ EqcOpts ++ PropErOpts,
-    Opts = [O || O <- Opts0, O =/= no_debug_info],
-    Config1 = rebar_config:set(Config, erl_opts, Opts),
-
-    FirstErls = rebar_config:get_list(Config1, eunit_first_files, []),
-    rebar_config:set(Config1, erl_first_files, FirstErls).
-
-eqc_opts() ->
-    define_if('EQC', is_lib_avail(is_eqc_avail, eqc,
-                                  "eqc.hrl", "QuickCheck")).
-
-proper_opts() ->
-    define_if('PROPER', is_lib_avail(is_proper_avail, proper,
-                                     "proper.hrl", "PropEr")).
-
-define_if(Def, true) -> [{d, Def}];
-define_if(_Def, false) -> [].
-
-is_lib_avail(DictKey, Mod, Hrl, Name) ->
-    case erlang:get(DictKey) of
-        undefined ->
-            IsAvail = case code:lib_dir(Mod, include) of
-                          {error, bad_name} ->
-                              false;
-                          Dir ->
-                              filelib:is_regular(filename:join(Dir, Hrl))
-                      end,
-            erlang:put(DictKey, IsAvail),
-            ?DEBUG("~s availability: ~p\n", [Name, IsAvail]),
-            IsAvail;
-        IsAvail ->
-            IsAvail
-    end.
 
 perform_cover(Config, BeamFiles, SrcModules) ->
     perform_cover(rebar_config:get(Config, cover_enabled, false),
@@ -287,7 +214,7 @@ cover_analyze(_Config, [], _SrcModules) ->
 cover_analyze(Config, Modules, SrcModules) ->
     %% suite can be a comma seperated list of modules to test
     Suite = [list_to_atom(S) ||
-                S <- string:tokens(rebar_config:get_global(suite, ""), ",")],
+                S <- string:tokens(rebar_config:get_global(Config, suite, ""), ",")],
     FilteredModules = case Suite of
                           [] -> Modules;
                           _  -> [M || M <- Modules, lists:member(M, Suite)]

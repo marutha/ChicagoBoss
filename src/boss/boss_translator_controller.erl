@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright
+%%     This file is part of ChicagoBoss project.
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc
+%%-------------------------------------------------------------------
+
 -module(boss_translator_controller).
 
 -behaviour(gen_server).
@@ -20,18 +32,13 @@ init(Options) ->
                 {Lang, dict:from_list(boss_lang:extract_po_strings(BossApp, Lang))}
         end, boss_files:language_list(BossApp)),
     {ok, #state{
-            strings = dict:from_list(StringDictionaryList), 
+            strings = dict:from_list(StringDictionaryList),
             application = BossApp }}.
 
 handle_call({lookup, Key, Locale}, _From, State) ->
     Return = case dict:find(Locale, State#state.strings) of
-        {ok, Dict} ->
-            case dict:find(Key, Dict) of
-                {ok, Trans} -> Trans;
-                error -> undefined
-            end;
-        _ ->
-            undefined
+        {ok, Dict} -> lookup_key(Key, Dict);
+        _ -> undefined
     end,
     {reply, Return, State};
 
@@ -45,7 +52,7 @@ handle_call({reload, Locale}, _From, State) ->
     },
     {reply, ok, NewState};
 handle_call(reload_all, From, State) ->
-    NewState = lists:foldr(fun(X, StateAcc) -> 
+    NewState = lists:foldr(fun(X, StateAcc) ->
                 {reply, ok, State1} = handle_call({reload, X}, From, StateAcc),
                 State1
         end, State, boss_files:language_list(State#state.application)),
@@ -63,3 +70,14 @@ code_change(_OldVsn, State, _Extra) ->
 
 handle_info(_Info, State) ->
     {noreply, State}.
+
+lookup_key(Key, Dict) when is_binary(Key) ->
+    case dict:find(binary_to_list(Key), Dict) of
+        {ok, Trans} -> list_to_binary(Trans);
+        error -> undefined
+    end;
+lookup_key(Key, Dict) ->
+    case dict:find(Key, Dict) of
+        {ok, Trans} -> Trans;
+        error -> undefined
+    end.

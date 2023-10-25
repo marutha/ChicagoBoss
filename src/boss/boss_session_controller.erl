@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright
+%%     This file is part of ChicagoBoss project.
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc
+%%-------------------------------------------------------------------
+
 -module(boss_session_controller).
 
 -behaviour(gen_server).
@@ -7,7 +19,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {
-        adapter, 
+        adapter,
         connection
     }).
 
@@ -19,8 +31,6 @@ start_link(Args) ->
 
 init(Options) ->
     Adapter = proplists:get_value(adapter, Options, boss_session_adapter_mock),
-    {A1, A2, A3} = now(),
-    random:seed(A1,A2,A3),
     {ok, Conn} = Adapter:start(Options),
     {ok, #state{adapter = Adapter, connection = Conn }}.
 
@@ -77,16 +87,16 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 generate_session_id() ->
-    Data = crypto:rand_bytes(2048),
-    Sha_list = binary_to_list(crypto:sha(Data)),
+    Data = crypto:strong_rand_bytes(2048),
+    Sha_list = binary_to_list(crypto:hash(sha, Data)),
     lists:flatten(list_to_hex(Sha_list)).
 %% Convert Integer from the SHA to Hex
 list_to_hex(L)->
-       lists:map(fun(X) -> int_to_hex(X) end, L).
- 
-int_to_hex(N) when N < 256 -> 
+    lists:map(fun(X) -> int_to_hex(X) end, L).
+
+int_to_hex(N) when N < 256 ->
        [hex(N div 16), hex(N rem 16)].
- 
+
 hex(N) when N < 10 ->
        $0+N;
 hex(N) when N >= 10, N < 16 ->

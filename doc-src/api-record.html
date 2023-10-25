@@ -1,7 +1,8 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p style="font-size: 14px;"><em>Jump to: </em> 
-<a href="#instance">Generated instance methods</a> 
+<p style="font-size: 14px;"><em>Jump to: </em>
+<a href="#mappings">Specifying table and column names</a>
+&nbsp; <a href="#instance">Generated instance methods</a>
 &nbsp; <a href="#associations">Associations (<code>belongs_to</code>, <code>has</code>)</a>
 &nbsp; <a href="#hooks">Save hooks</a>
 </p>
@@ -14,7 +15,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
     other parameters should be CamelCased attributes of your data model.</p></li>
 
     <li><p>All parameters will be available as lower-case, underscored functions,
-    e.g. <code>-module(foo, [Id, TheText])</code> will generate the getter functions 
+    e.g. <code>-module(foo, [Id, TheText])</code> will generate the getter functions
     <code>id()</code> and <code>the_text()</code>.</p></li>
 
     <li><p>Parameters can contain typespecs, e.g. <code>-module(foo, [Id, SomeString::string(), ...]).</code>. Valid types are:
@@ -23,6 +24,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
         <li><code>binary()</code></li>
         <li><code>integer()</code></li>
         <li><code>float()</code></li>
+        <li><code>date()</code></li>
         <li><code>datetime()</code></li>
         <li><code>timestamp()</code></li>
         <li><code>boolean()</code></li>
@@ -39,25 +41,31 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 
     <li><p>To see the full API for a BossRecord called <code>foo</code> at any time during development, point your browser to /doc/foo on your dev server.</p></li>
 </ul>
+<a name="mappings"></a>
+<h2>Specifying table and column names</h2>
+<p>If you're connecting to an existing SQL database, you may want to override the default table and column names. (By default, the table name is the plural form of the model name, and the column names are the lowercase, underscored versions of the attribute variables.)</p>
+<p>To specify your own database layout, you can use the <code>-table</code> and <code>-columns</code> module attributes:</p>
+<div class="code spec">
+    <span class="attr">-table</span>("my_table_name").<br />
+    <span class="attr">-columns</span>([{attribute1, "my_column_name"}]).
+</div>
+<p>These names can be accessed at run-time with the <code>database_table/0</code> and <code>database_columns/0</code> functions; see below.</p>
 <a name="instance"></a>
 <h2>Generated functions</h2>
 <p>Generated instance functions of a BossRecord include:</p>
 
-{% if functions %}
+
 {% for function in functions %}
-{% ifnotequal function.function "trivial_counter" %}
-<a name="{{ function.function }}"></a>
-<div class="code spec">
-    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-</div>
-<p>
-{% if function.description_long %}
-{{ function.description_long }}
-{% endif %}
-</p>
-{% endifnotequal %}
+    {% ifnotequal function.function "trivial_counter" %}
+    <a name="{{ function.function }}"></a>
+    <div class="example {% cycle 'row1' 'row2' %}">
+        <div class="code spec">
+            {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+        </div>
+        <p>{% if function.description_long %}{{ function.description_long }}{% else %}&nbsp;{% endif %}</p>
+    </div>
+    {% endifnotequal %}
 {% endfor %}
-{% endif %}
 
 <p>Other getters and setters are generated based on the parameters of your BossRecord.</p>
 
@@ -70,7 +78,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
     <span class="attr">-belongs_to</span>(foo).
 </div>
 
-<p>Requires a matching <code>FooId</code> in the parameter list. Adds a function <code>foo()</code> which returns the BossRecord (of any type, usually <code>foo</code>) with ID equal to the current BossRecord's <code>FooId</code>.</p>
+<p>Requires a matching <code>FooId</code> in the parameter list. Adds a function <code>foo()</code> which returns the BossRecord (of any type, usually <code>foo</code>) with ID equal to the current BossRecord's <code>FooId</code>. If the model name differs from the field name, use <code>-belongs_to_&lt;model name&gt;(&lt;field name&gt;)</code>.</p>
 
 <div class="code spec">
     <span class="attr">-has</span>({bar, 1}).<br />
@@ -83,21 +91,16 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 <p>When <code>Count</code> is not equal to 1, <code>has</code> can also take a proplist of options as the third element in the tuple:</p>
 
 <div class="code spec">
-    <span class="attr">-has</span>({bars, many, [{sort_by, first_name}]}).</span>
+    <span class="attr">-has</span>({bars, many, [{order_by, first_name}]}).</span>
 </div>
 
 <p>Valid options are:</p>
 <ul>
-    <li><code>sort_by</code> - attribute to sort on. Defaults to 'id'</li>
-    <li><code>sort_order</code> - whether to sort numerically or as a string, and ascending or descending. Valid values are:
-    <ul>
-        <li><code>str_ascending</code> - As string in dictionary order A-Z</li>
-        <li><code>str_descending</code> - As string in reverse dictionary order Z-A</li>
-        <li><code>num_ascending</code> - As number, low numbers first</li>
-        <li><code>num_descending</code> - As number, high numbers first</li>
-    </ul>
+    <li><code>order_by</code> - attribute to sort on. Defaults to 'id'</li>
+    <li><code>descending</code> - whether to values from high to low (a boolean).</li>
     <li><code>module</code> - If the assocation name is different than the underlying module, use this option to specify the underlying module.</li>
     <li><code>foreign_key</code> - If the associated module uses something unexpected for the foreign key, use this option to specify the foreign key (e.g. <code>person_id</code>).</li>
+    <li><code>include</code> - a list of belongs_to associations to pre-fetch (atoms). Requires the database cache to be enabled.</li>
 </ul>
 
 <p>Note that Time and float attributes are stored internally as integers, so sort them with <code>num_ascending</code> or <code>num_descending</code>.</p>

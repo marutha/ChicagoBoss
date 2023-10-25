@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright
+%%     This file is part of ChicagoBoss project.
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc
+%%-------------------------------------------------------------------
+
 -module(boss_mq_controller).
 
 -behaviour(gen_server).
@@ -15,7 +27,7 @@ start_link(Args) ->
     gen_server:start_link({global, boss_mq}, ?MODULE, Args, []).
 
 init(Options) ->
-    Adapter = proplists:get_value(adapter, Options, boss_mq_adapter_bmq),
+    Adapter = proplists:get_value(adapter, Options, boss_mq_adapter_tinymq),
     {ok, Conn} = Adapter:start(Options),
     {ok, #state{adapter = Adapter, connection = Conn}}.
 

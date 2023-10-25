@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright
+%%     This file is part of ChicagoBoss project.
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc
+%%-------------------------------------------------------------------
+
 -module(boss_smtp_server).
 -behaviour(gen_smtp_server_session).
 
@@ -13,12 +25,13 @@
 
 init(Hostname, _SessionCount, Address, Options) ->
     Errors = case proplists:get_value(boss_env, Options, development) of
-        development -> 
-            case boss_load:load_mail_controllers() of
-                {ok, _} -> 
-                    case boss_load:load_libraries() of
+        development ->
+            Application = boss_env:get_env(developing_app, undefined),
+            case boss_load:load_mail_controllers(Application) of
+                {ok, _} ->
+                    case boss_load:load_libraries(Application) of
                         {ok, _} ->
-                            case boss_load:load_models() of
+                            case boss_load:load_models(Application) of
                                 {ok, _} -> [];
                                 {error, List} -> List
                             end;
@@ -28,8 +41,8 @@ init(Hostname, _SessionCount, Address, Options) ->
             end;
         _ -> []
     end,
-    {ok, [Hostname, " SMTP Chicago Boss: Tell me something I don't know"], 
-        #state{remote_ip = Address, errors = Errors}}. 
+    {ok, [Hostname, " SMTP Chicago Boss: Tell me something I don't know"],
+        #state{remote_ip = Address, errors = Errors}}.
 
 handle_HELO(_Hostname, State) ->
     {ok, 655360, State}.
@@ -125,11 +138,11 @@ handle_DATA(FromAddress, ToAddressList, _Data, State) ->
     reply_with_errors(FromAddress, ToAddressList, State).
 
 reply_with_errors(_FromAddress, _ToAddressList, #state{ errors = [] } = State) ->
-    Reference = lists:flatten([io_lib:format("~2.16.0b", [X]) || <<X>> <= erlang:md5(term_to_binary(erlang:now()))]),
+    Reference = lists:flatten([io_lib:format("~2.16.0b", [X]) || <<X>> <= erlang:md5(term_to_binary(os:timestamp()))]),
     {ok, Reference, State};
 reply_with_errors(FromAddress, ToAddressList, #state{ errors = Errors } = State) ->
     FirstAddress = hd(ToAddressList),
-    boss_mail:send(binary_to_list(FirstAddress), binary_to_list(FromAddress), 
+    boss_mail:send(binary_to_list(FirstAddress), binary_to_list(FromAddress),
         "ERROR", "There were errors delivering your message: ~p~n", [Errors]),
     reply_with_errors(FromAddress, ToAddressList, State#state{ errors = [] }).
 

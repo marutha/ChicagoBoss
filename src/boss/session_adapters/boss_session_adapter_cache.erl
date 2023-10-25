@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright
+%%     This file is part of ChicagoBoss project.
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc
+%%-------------------------------------------------------------------
+
 -module(boss_session_adapter_cache).
 -behaviour(boss_session_adapter).
 -export([start/0, start/1, stop/1, init/1]).
@@ -44,7 +56,7 @@ lookup_session_value(#conn{ prefix = Prefix }, SessionID, Key) ->
 
 set_session_value(#conn{ prefix = Prefix }, SessionID, Key, Value) ->
     case boss_cache:get(Prefix, SessionID) of
-        undefined -> 
+        undefined ->
             create_session(#conn{ prefix = Prefix }, SessionID, [{Key, Value}]);
         PropList ->
             boss_cache:set(Prefix, SessionID, [{Key, Value}|proplists:delete(Key, PropList)], 0)

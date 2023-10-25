@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright
+%%     This file is part of ChicagoBoss project.
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc
+%%-------------------------------------------------------------------
+
 -module(boss_session_mock_controller).
 -behaviour(gen_server).
 
@@ -7,7 +19,7 @@
 -record(boss_session, {sid, data}).
 
 -record(state, {
-        table, 
+        table,
         session_dict = dict:new(),
         ttl_tree = gb_trees:empty(),
         exp_time
@@ -29,8 +41,8 @@ handle_call({session_exists, SessionID}, _From, State) ->
         true ->
             NowSeconds = now_seconds(),
             Val = dict:fetch(SessionID, State#state.session_dict),
-            State#state{ 
-                ttl_tree = boss_pq:move_value(Val, NowSeconds + State#state.exp_time, SessionID, State#state.ttl_tree),
+            State#state{
+                ttl_tree = tiny_pq:move_value(Val, NowSeconds + State#state.exp_time, SessionID, State#state.ttl_tree),
                 session_dict = dict:store(SessionID,
                     NowSeconds + State#state.exp_time,
                     State#state.session_dict)};
@@ -41,8 +53,8 @@ handle_call({session_exists, SessionID}, _From, State) ->
 handle_call({create_session, SessionID, Data}, _From, State) ->
     NowSeconds = now_seconds(),
     ets:insert(State#state.table, #boss_session{sid=SessionID, data=Data}),
-    NewState = State#state{ 
-        ttl_tree = boss_pq:insert_value(NowSeconds + State#state.exp_time, SessionID, State#state.ttl_tree),
+    NewState = State#state{
+        ttl_tree = tiny_pq:insert_value(NowSeconds + State#state.exp_time, SessionID, State#state.ttl_tree),
         session_dict = dict:store(SessionID, NowSeconds + State#state.exp_time, State#state.session_dict)
     },
     {reply, ok, NewState};
@@ -76,8 +88,8 @@ handle_call({delete_session, SessionID}, _From, State) ->
     ets:delete(State#state.table, SessionID),
     NewState = case dict:find(SessionID, State#state.session_dict) of
         {ok, Val} ->
-            State#state{ 
-                ttl_tree = boss_pq:delete_value(Val, SessionID, State#state.ttl_tree),
+            State#state{
+                ttl_tree = tiny_pq:delete_value(Val, SessionID, State#state.ttl_tree),
                 session_dict = dict:erase(SessionID, State#state.session_dict)
             };
         _ ->
@@ -95,7 +107,7 @@ handle_call({delete_session_value, SessionID, Key}, _From, State) ->
                 false ->
                     ok
             end;
-        [] -> 
+        [] ->
             ok
     end,
     {reply, ok, State}.
@@ -113,13 +125,13 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 prune_expired_sessions(#state{ ttl_tree = Tree, session_dict = Dict, table = TableId } = State, NowSeconds) ->
-    {NewDict, NewTree} = boss_pq:prune(fun(SessionID, DictAcc) ->
+    {NewDict, NewTree} = tiny_pq:prune_collect_old(fun(SessionID, DictAcc) ->
                 ets:delete(TableId, SessionID),
                 dict:erase(SessionID, DictAcc)
         end, Dict, Tree, NowSeconds),
     State#state{ ttl_tree = NewTree, session_dict = NewDict }.
 
 now_seconds() ->
-    {A, B, _} = erlang:now(),
+    {A, B, _} = os:timestamp(),
     A * 1000 * 1000 + B.
 

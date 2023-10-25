@@ -1,4 +1,14 @@
+%%-------------------------------------------------------------------
+%% @author
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright
+%%     This file is part of ChicagoBoss project.
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
 %% @doc Chicago Boss translator service
+%%-------------------------------------------------------------------
 
 -module(boss_translator).
 
@@ -6,7 +16,7 @@
 
 -export([
         is_loaded/2,
-        lookup/3, 
+        lookup/3,
         fun_for/2,
         reload/2,
         reload_all/1

@@ -1,5 +1,8 @@
 Chicago Boss: Start small, dream big
 ====================================
+[![Build Status](https://travis-ci.org/ChicagoBoss/ChicagoBoss.svg?branch=master)](https://travis-ci.org/ChicagoBoss/ChicagoBoss)
+
+Attention! This is a master branch supporting Erlang 18. For older Erlang versions use legacy branch.
 
 Chicago Boss is a server framework inspired by Rails and written in Erlang. It
 offers all the conveniences of modern web development, including Comet. What sets
@@ -7,23 +10,28 @@ Chicago Boss apart from other non-Erlang frameworks is that it can handle large
 amounts of traffic without any drop in performance. What sets Chicago Boss apart
 from other Erlang frameworks is that it is easy to set up and use.
 
+WARNING: Chicago Boss does not work with Erlang R16B03 due to an error in erl_syntax
 
 60-second Quickstart
 --------------------
 
 After downloading and extracting, type
 
-    make
-    make app PROJECT=mynewproject
-    cd ../mynewproject
-    ./init-dev.sh
-    
+```console
+make
+make app PROJECT=mynewproject
+cd ../mynewproject
+./init-dev.sh
+```
+
 For Windows, type
-    
-    windows-make.bat
-    windows-make.bat app PROJECT=mynewproject
-    cd ..\mynewproject
-    start-server.bat
+
+```console
+windows-make.bat
+windows-make.bat app PROJECT=mynewproject
+cd ..\mynewproject
+start-server.bat
+```
 
 Then visit http://localhost:8001/ in your browser. Congratulations, you have
 a web server. There will be a lot of PROGRESS REPORTs on your console but
@@ -36,7 +44,7 @@ letter and contain only letters, digits, and underscores (for easy compatibility
 Dependencies
 ------------
 
-* Erlang R14B01 or later -
+* Erlang 19.0 or later -
 
     <http://www.erlang.org/download.html>
 
@@ -53,7 +61,7 @@ Admin Interface
 
 You probably want to install the CB admin interface. Download it from
 
-    <https://github.com/evanmiller/cb_admin>
+    <https://github.com/ChicagoBoss/cb_admin>
 
 
 Upgrades
@@ -96,12 +104,16 @@ for foreign keys, etc.).
 an Erlang parameterized module on steroids. You instantiate a BossRecord like
 a regular parameterized module:
 
-    Article = article:new('id', "This is a title", "This is a body")
+```erlang
+Article = article:new('id', "This is a title", "This is a body")
+```
 
 But then CB generates functions and attaches them to BossRecords, so you can
 write code like
 
-    {ok, SavedArticle} = Article:save()
+```erlang
+{ok, SavedArticle} = Article:save()
+```
 
 Before saving to the database, the save() function will call a function called
 validation_tests(), where you can perform custom validation logic.
@@ -109,7 +121,9 @@ validation_tests(), where you can perform custom validation logic.
 CB also generates getter functions which can be invoked directly in templates,
 so in your template you can write things like
 
-    {{ article.title }}
+```erlang
+{{ article.title }}
+```
 
 Speaking of which...
 
@@ -149,9 +163,9 @@ for storing and retrieving session information.
 Rails (`/controller/action/id`). You can customize the routes and provide
 a base URL in the priv/application.routes file. Of course, most routing occurs
 with the pattern-matching controller logic, e.g.
-
-    posts('GET', ["category", Category]) ->
-        ...
+```erlang
+posts('GET', ["category", Category]) ->
+```
 
 You can then generate URLs to match controller patterns in your templates like
 so:
@@ -175,9 +189,11 @@ other language, Erlang gives you the benefits of asynchronous network
 communcation without using callbacks. Here is a trivial example of a long-poll
 controller:
 
-    longpoll('GET', [Channel]) ->
-        {ok, Timestamp, Messages} = boss_mq:pull(Channel, last),
-        {json, [{timestamp, Timestamp}, {messages, Messages}]}.
+```erlang
+longpoll('GET', [Channel]) ->
+    {ok, Timestamp, Messages} = boss_mq:pull(Channel, last),
+    {json, [{timestamp, Timestamp}, {messages, Messages}]}.
+```
 
 The call to `pull` blocks until a message is received. Because processes are
 cheap in Erlang, the overhead of keeping alive a blocking request is very small
@@ -221,6 +237,18 @@ If you need help getting started, check the new pdf tutorial:
 
 <http://www.chicagoboss.org/tutorial.pdf>
 
+Be sure to also check the wiki
+
+<https://github.com/ChicagoBoss/ChicagoBoss/wiki>
+
 There's also the mailing list:
 
 <http://groups.google.com/group/chicagoboss>
+
+If you want to contribute to CB
+
+[CODING_STANDARDS.md](https://github.com/ChicagoBoss/ChicagoBoss/blob/master/CODING_STANDARDS.md)
+
+View the CHANGELOG.md
+
+[CHANGELOG.md](https://github.com/ChicagoBoss/ChicagoBoss/blob/master/CHANGELOG.md)

@@ -1,13 +1,27 @@
+%%-------------------------------------------------------------------
+%% @author
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright
+%%     This file is part of ChicagoBoss project.
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc
+%%-------------------------------------------------------------------
+
 -module(boss_erlydtl_tags).
 -export([url/2]).
 
 url(Variables, Options) ->
-    ListVars = lists:map(fun 
-            ({K, V}) when is_binary(V) -> {K, binary_to_list(V)}; 
-            ({K, V}) -> {K, V} 
+    ListVars = lists:map(fun
+            ({K, V}) when is_binary(V) -> {K, binary_to_list(V)};
+            ({K, V}) -> {K, V}
         end, Variables),
     ThisApp = proplists:get_value(application, Options),
     LinkedApp = proplists:get_value(application, ListVars, ThisApp),
+    LinkedAppAtom = list_to_atom(lists:concat([LinkedApp])),
+    ControllerList = boss_files:web_controller_list(LinkedApp),
     ThisController = proplists:get_value(controller, Options),
     LinkedController = proplists:get_value(controller, ListVars, ThisController),
     DefaultAction = case proplists:get_value(controller, ListVars) of
@@ -32,12 +46,12 @@ url(Variables, Options) ->
     ProtocolPlusDomain = case ThisApp =:= LinkedApp of
         true -> "";
         false ->
-            case boss_web:domains(list_to_atom(lists:concat([LinkedApp]))) of
+            case boss_web:domains(LinkedAppAtom) of
                 all -> "";
-                Domains -> 
+                Domains ->
                     UseSameDomain = case proplists:get_value(host, Options) of
                         undefined -> false;
-                        DefinedHost -> 
+                        DefinedHost ->
                             [H|_] = re:split(DefinedHost, ":", [{return, list}]),
                             lists:member(H, Domains)
                     end,
@@ -49,6 +63,12 @@ url(Variables, Options) ->
     end,
 
     RouterPid = proplists:get_value(router_pid, Options),
-    URL = boss_router:unroute(RouterPid, LinkedController, Action, NoUndefinedVars),
-    BaseURL = boss_web:base_url(list_to_atom(lists:concat([LinkedApp]))),
+    RouterAdapter = boss_env:router_adapter(),
+    URL = RouterAdapter:unroute(RouterPid, LinkedAppAtom, ControllerList, LinkedController, Action, NoUndefinedVars),
+    BaseURL = case proplists:get_value(base_url, Options) of
+        undefined -> boss_web:base_url(LinkedAppAtom);
+        "" -> boss_web:base_url(LinkedAppAtom);
+        ProvidedBaseURL ->
+            ProvidedBaseURL
+    end,
     ProtocolPlusDomain ++ BaseURL ++ URL.
